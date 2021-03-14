@@ -155,15 +155,15 @@ in .travis.yml
 ```yaml
 language: python
 python:
-	- "3.9"
+  - "3.9"
 
 services:
-	- docker
+  - docker
 
 before_script: pip install docker-compose
 
 script:
-	- docker-compose run app sh -c "python manage.py test && flake8"
+  - docker-compose run app sh -c "python manage.py test && flake8"
 ```
 
 
@@ -204,9 +204,125 @@ $ git push origin
 
 
 
+```
+$ docker-compose run app sh -c "python manage.py startapp core"
+$ rm app/core/tests.py  # will replace it with testes folder
+$ rm app/core/views.py  # no need for views in core app
+$ mkdir app/core/tests
+$ touch app/core/tests/__init__.py
+```
 
 
 
+```
+add:
+'core',
+to installed apps in settings.py
+```
 
 
+
+```
+$ touch app/core/tests/test_models.py
+```
+
+
+
+in test_models.py
+
+```python
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+
+
+class ModelTests(TestCase):
+    def test_create_user_with_email_successful(self):
+        """Test creating a new user with an email is successful"""
+        email = 'test@hany.ws'
+        password = 'TestPass123'
+        user = get_user_model().objects.create_user(
+            email=email,
+            password=password
+        )
+
+        self.assertEqual(user.email, email)
+        self.assertTrue(user.check_password(password))
+
+```
+
+
+
+```
+$ docker-compose run app sh -c "python manage.py test"
+```
+
+
+
+in models.py
+
+```python
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, \
+    PermissionsMixin
+from django.db import models
+
+
+class UserManager(BaseUserManager):
+
+    def create_user(self, email, password=None, **extra_fields):
+        """Creates and saves a new user"""
+        if not email:
+            raise ValueError('Users must have an email address')
+        user = self.model(email=self.normalize_email(email), **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+
+        return user
+
+    def create_superuser(self, email, password):
+        """Creates and saves a new super user"""
+        user = self.create_user(email, password)
+        user.is_staff = True
+        user.is_superuser = True
+        user.save(using=self._db)
+
+        return user
+
+
+class User(AbstractBaseUser, PermissionsMixin):
+    """Custom user model that supports using email instead of username"""
+    email = models.EmailField(max_length=255, unique=True)
+    name = models.CharField(max_length=255)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+
+    objects = UserManager()
+
+    USERNAME_FIELD = 'email'
+
+```
+
+
+
+in settings.py -> in the last add:
+
+```
+AUTH_USER_MODEL = 'core.User'
+```
+
+
+
+```
+$ docker-compose run app sh -c "python manage.py makemigrations core"
+```
+
+```
+$ docker-compose run app sh -c "python manage.py test && flake8"
+```
+
+
+
+```
+$ git add .
+$ git commit -m "Added custom user model."
+```
 
