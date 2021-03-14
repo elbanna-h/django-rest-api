@@ -114,6 +114,12 @@ services:
 
 
 
+command + option + l
+
+to reformat in pycharm
+
+
+
 ```
 $ docker-compose build
 
@@ -162,6 +168,12 @@ script:
 
 
 
+command + option + l
+
+to reformat in pycharm
+
+
+
 ```
 $ cd app
 $ touch .flake8
@@ -183,6 +195,7 @@ exclude =
 
 
 ```
+$ cd ..
 $ git add .
 $ git commit -m "Added flake8 and Travis-CI configuration."
 
