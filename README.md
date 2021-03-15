@@ -45,15 +45,22 @@ MAINTAINER Hany Elbanna
 ENV PYTHONUNBUFFERED 1
 
 COPY ./requirements.txt /requirements.txt
+RUN apk add --update --no-cache postgresql-client jpeg-dev
+RUN apk add --update --no-cache --virtual .tmp-build-deps \
+      gcc libc-dev linux-headers postgresql-dev musl-dev zlib zlib-dev
 RUN pip install -r /requirements.txt
+RUN apk del .tmp-build-deps
 
 RUN mkdir /app
 WORKDIR /app
 COPY ./app /app
 
+RUN mkdir -p /vol/web/media
+RUN mkdir -p /vol/web/static
 RUN adduser -D user
+RUN chown -R user:user /vol/
+RUN chmod -R 755 /vol/web
 USER user
-
 ```
 
 
@@ -69,6 +76,8 @@ in requirements.txt
 ```
 Django>=3.1.7,<3.2.0
 djangorestframework>=3.12.2,<3.13.0
+psycopg2>=2.8.6,<2.9.0
+
 flake8>=3.8.4,<3.9.0
 ```
 
@@ -431,5 +440,46 @@ $ git commit -m "updated admin to support custom user model."
 
 $ git push origin
 
+```
+
+
+
+update in docker-compose.yml
+
+```yaml
+version: "3"
+
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app
+    command: >
+      sh -c "python manage.py runserver 0.0.0.0:8000"
+    environment:
+      - DB_HOST=db
+      - DB_NAME=app
+      - DB_USER=postgres
+      - DB_PASS=islam_25
+    depends_on:
+      - db
+
+  db:
+    image: postgres:13.2-alpine
+    environment:
+      - POSTGRES_DB=app
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=islam_25
+```
+
+
+
+
+
+```
+$ docker-compose up
 ```
 
