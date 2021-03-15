@@ -324,5 +324,112 @@ $ docker-compose run app sh -c "python manage.py test && flake8"
 ```
 $ git add .
 $ git commit -m "Added custom user model."
+
+$ git push origin
+```
+
+
+
+create test_admin.py in tests folder:
+
+```python
+from django.contrib.auth import get_user_model
+from django.test import TestCase, Client
+from django.urls import reverse
+
+
+class AdminSiteTests(TestCase):
+
+    def setUp(self):
+        """setUp method user as a setup helper for other testing methods"""
+        # self in self.client to create instance variable accessible in other functions
+        self.client = Client()
+
+        self.admin_user = get_user_model().objects.create_superuser(
+            email='admin@hany.ws',
+            password='AdminPass123'
+        )
+
+        self.client.force_login(self.admin_user)
+
+        self.user = get_user_model().objects.create_user(
+            email='test@hany.ws',
+            password='TestPass123',
+            name='Test user full name'
+        )
+
+    def test_users_listed(self):
+        """Test that users are listed on user page"""
+        url = reverse('admin:core_user_changelist')
+        res = self.client.get(url)
+
+        self.assertContains(res, self.user.name)
+        self.assertContains(res, self.user.email)
+
+    def test_user_change_page(self):
+        """Test that the user edit page works"""
+        url = reverse('admin:core_user_change', args=[self.user.id])
+        res = self.client.get(url)
+
+        self.assertEqual(res.status_code, 200)
+
+    def test_create_user_page(self):
+        """Test that the create user page works"""
+        url = reverse('admin:core_user_add')
+        res = self.client.get(url)
+
+        self.assertEqual(res.status_code, 200)
+
+```
+
+
+
+admin.py
+
+```python
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.utils.translation import gettext as _
+
+from core import models
+
+
+class UserAdmin(BaseUserAdmin):
+    ordering = ['id']
+    list_display = ['email', 'name']
+    fieldsets = (
+        (None, {'fields': ('email', 'password')}),
+        (_('Personal Info'), {'fields': ('name',)}),
+        (
+            _('Permissions'),
+            {'fields': ('is_active', 'is_staff', 'is_superuser')}
+        ),
+        (_('Important dates'), {'fields': ('last_login',)})
+    )
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('email', 'password1', 'password2')
+        }),
+    )
+
+
+admin.site.register(models.User, UserAdmin)
+```
+
+
+
+```
+$ docker-compose run app sh -c "python manage.py test && flake8"
+```
+
+
+
+```
+$ git add .
+$ git commit -m "updated admin to support custom user model."
+
+$ git push origin
+
 ```
 
